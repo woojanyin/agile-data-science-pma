@@ -13,12 +13,137 @@ df = pd.read_csv("Bank_Personal_Loan_Modelling.csv")
 # Dashboard Title
 # ============================================
 
-st.title("🏦 Bank Personal Loan Approval Dashboard")
+st.title("Bank Personal Loan Approval Dashboard")
 
 st.write(
     "This dashboard assists bank officers in analysing customer information "
     "and supporting personal loan approval decisions."
 )
+
+# ============================================
+# Monitoring Dashboard
+# ============================================
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, recall_score
+
+# Prepare Dataset
+X = df.drop('Personal Loan', axis=1)
+
+# Remove non-model/dashboard columns
+columns_to_drop = [
+    'Education_Label',
+    'CCAvg'          # drop because contains string values like '3/80'
+]
+
+for col in columns_to_drop:
+    if col in X.columns:
+        X = X.drop(col, axis=1)
+
+# Keep only numeric columns as a safety check
+X = X.select_dtypes(include=['int64', 'float64'])
+
+y = df['Personal Loan']
+
+# Split dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
+
+# Train Best Model
+rf_model = RandomForestClassifier(
+    n_estimators=100,
+    random_state=42
+)
+
+rf_model.fit(X_train, y_train)
+
+# Prediction
+y_pred = rf_model.predict(X_test)
+
+# Monitoring Metrics
+
+model_accuracy = accuracy_score(y_test, y_pred)
+loan_recall = recall_score(y_test, y_pred)
+missing_values = df.isnull().sum().sum()
+
+# Dashboard Title
+st.header("Monitoring Dashboard")
+
+st.write(
+    "Monitoring metrics are used to evaluate "
+    "model performance and data quality after deployment."
+)
+
+### CSS Styling ###
+st.markdown("""
+<style>
+.metric-card {
+    background-color: #EAF4FF;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #B3D9FF;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.metric-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #003366;
+}
+
+.metric-value {
+    font-size: 30px;
+    font-weight: bold;
+    color: #0066CC;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Display Metrics
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-title">
+            Model Accuracy
+        </div>
+        <div class="metric-value">
+            {model_accuracy:.2%}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-title">
+            Loan Recall
+        </div>
+        <div class="metric-value">
+            {loan_recall:.2%}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-title">
+            Missing Values
+        </div>
+        <div class="metric-value">
+            {missing_values}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ============================================
 # Convert Education Codes
@@ -33,7 +158,7 @@ education_mapping = {
 df["Education_Label"] = df["Education"].map(education_mapping)
 
 # ============================================
-# Predictive Output
+# Predictive Input
 # ============================================
 
 st.header("Loan Approval Prediction")
@@ -54,8 +179,6 @@ education_input = st.selectbox(
     "Education Level",
     list(education_mapping.values())
 )
-
-st.sidebar.header("Filter Customers")
 
 # ============================================
 # Temporary Prediction Logic
